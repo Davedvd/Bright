@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Živé pozadí – laděné k dashboardu</title>
+  <style>
+    :root {
+      --blur: 40px;
+      --bend-radius: 40vmin;
+      --bend-shift: 20%;
+      --skew-max: 6deg;
+      --follow-left: 8vmin;
+      --follow-right: 8vmin;
+
+      --mx: 0.5;
+      --my: 0.5;
+    }
+
+    html, body { height: 100%; }
+
+    body {
+      margin: 0;
+      background: linear-gradient(180deg, #f9fbff 0%, #eef4ff 100%);
+      overflow: hidden;
+    }
+
+    .bg {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+    }
+
+    .blob {
+      position: absolute;
+      width: 85vmax;
+      height: 85vmax;
+      top: 50%;
+      filter: blur(var(--blur));
+      opacity: 0.7;
+      will-change: transform, background;
+      transform: var(--move, translate(-50%, -50%)) var(--skew, skew(0deg, 0deg)) var(--scale, scale(1)) var(--rot, rotate(0turn));
+    }
+
+    .blob--left {
+      left: 0%;
+      --move: translate(-35%, -50%);
+      background: radial-gradient(
+        circle at var(--cx1, 40%) var(--cy1, 50%),
+        rgba(0, 102, 255, 0.35) 0%,
+        rgba(0, 153, 255, 0.25) 25%,
+        rgba(200, 230, 255, 0.1) 60%,
+        rgba(255, 255, 255, 0) 80%
+      );
+      mix-blend-mode: screen;
+      animation: breathe-left 10s ease-in-out infinite alternate;
+    }
+
+    .blob--right {
+      left: 100%;
+      --move: translate(-65%, -50%);
+      background: radial-gradient(
+        circle at var(--cx2, 60%) var(--cy2, 50%),
+        rgba(51, 153, 255, 0.3) 0%,
+        rgba(102, 204, 255, 0.2) 25%,
+        rgba(200, 230, 255, 0.1) 55%,
+        rgba(255, 255, 255, 0) 80%
+      );
+      mix-blend-mode: screen;
+      animation: breathe-right 12s ease-in-out infinite alternate;
+    }
+
+    @keyframes breathe-left {
+      0% { --scale: scale(0.96); --rot: rotate(-0.015turn); }
+      100% { --scale: scale(1.05); --rot: rotate(0.015turn); }
+    }
+    @keyframes breathe-right {
+      0% { --scale: scale(0.95); --rot: rotate(0.015turn); }
+      100% { --scale: scale(1.06); --rot: rotate(-0.015turn); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .blob { animation: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg" aria-hidden="true">
+    <div class="blob blob--left" id="blobLeft"></div>
+    <div class="blob blob--right" id="blobRight"></div>
+  </div>
+
+  <script>
+    (function () {
+      const root = document.documentElement;
+      const left = document.getElementById('blobLeft');
+      const right = document.getElementById('blobRight');
+
+      let targetX = 0.5, targetY = 0.5;
+      let x = 0.5, y = 0.5;
+
+      const onPointerMove = (e) => {
+        const cx = e.clientX ?? (e.touches && e.touches[0]?.clientX) ?? innerWidth / 2;
+        const cy = e.clientY ?? (e.touches && e.touches[0]?.clientY) ?? innerHeight / 2;
+        targetX = Math.max(0, Math.min(1, cx / innerWidth));
+        targetY = Math.max(0, Math.min(1, cy / innerHeight));
+      };
+      addEventListener('pointermove', onPointerMove, { passive: true });
+      addEventListener('touchmove', onPointerMove, { passive: true });
+      addEventListener('pointerleave', () => { targetX = 0.5; targetY = 0.5; });
+
+      const lerp = (a, b, t) => a + (b - a) * t;
+
+      function update() {
+        x = lerp(x, targetX, 0.08);
+        y = lerp(y, targetY, 0.08);
+        root.style.setProperty('--mx', String(x));
+        root.style.setProperty('--my', String(y));
+
+        calcBlob(left, 0.2, 0.5, getVmin('--follow-left'));
+        calcBlob(right, 0.8, 0.5, getVmin('--follow-right'));
+
+        requestAnimationFrame(update);
+      }
+
+      function getVmin(varName) {
+        const v = parseFloat(getComputedStyle(root).getPropertyValue(varName));
+        const minSide = Math.min(innerWidth, innerHeight);
+        return (v / 100) * minSide;
+      }
+
+      function calcBlob(el, baseNX, baseNY, followPx) {
+        const cx = x * innerWidth;
+        const cy = y * innerHeight;
+        const baseX = baseNX * innerWidth;
+        const baseY = baseNY * innerHeight;
+        const dx = cx - baseX;
+        const dy = cy - baseY;
+        const dist = Math.hypot(dx, dy);
+
+        const bendRadiusPx = parseFloat(getComputedStyle(root).getPropertyValue('--bend-radius')) * Math.min(innerWidth, innerHeight) / 100;
+        const influence = Math.exp(-(dist * dist) / (bendRadiusPx * bendRadiusPx));
+
+        const mx = (dx / Math.max(1, dist)) * followPx * influence;
+        const my = (dy / Math.max(1, dist)) * followPx * influence;
+
+        const skewX = (dx / Math.max(1, dist)) * influence;
+        const skewY = (dy / Math.max(1, dist)) * influence;
+        const skMax = parseFloat(getComputedStyle(root).getPropertyValue('--skew-max'));
+        const skx = skMax * skewX;
+        const sky = skMax * skewY * 0.6;
+
+        const shift = parseFloat(getComputedStyle(root).getPropertyValue('--bend-shift'));
+        const cxPct = 50 + (x - baseNX) * shift * influence;
+        const cyPct = 50 + (y - baseNY) * shift * 0.8 * influence;
+
+        el.style.setProperty('--skew', `skew(${skx}deg, ${sky}deg)`);
+        el.style.setProperty('--move', `translate(calc(-50% + ${mx}px), calc(-50% + ${my}px))`);
+
+        if (el === left) {
+          el.style.setProperty('--cx1', cxPct + '%');
+          el.style.setProperty('--cy1', cyPct + '%');
+        } else {
+          el.style.setProperty('--cx2', cxPct + '%');
+          el.style.setProperty('--cy2', cyPct + '%');
+        }
+      }
+
+      requestAnimationFrame(update);
+    })();
+  </script>
+</body>
+</html>
