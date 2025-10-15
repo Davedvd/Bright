@@ -1,174 +1,121 @@
 <!DOCTYPE html>
 <html lang="cs">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Živé pozadí – laděné k dashboardu</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Světlé interaktivní pozadí s jemnými vlnami</title>
   <style>
     :root {
-      --blur: 40px;
-      --bend-radius: 40vmin;
-      --bend-shift: 20%;
-      --skew-max: 6deg;
-      --follow-left: 8vmin;
-      --follow-right: 8vmin;
-
-      --mx: 0.5;
-      --my: 0.5;
+      /* Hlavní barva pro grafy/texty */
+      --accent: #118DFF;
+      /* Velmi světlé pozadí – aby tmavý text dobře vynikl */
+      --bg1: #ffffff;
+      --bg2: #f6fbff;
+      /* Tóny vln – extrémně světlé s akcentním nádechem */
+      --wave1: rgba(17,141,255,0.10);
+      --wave2: rgba(17,141,255,0.07);
+      --wave3: rgba(17,141,255,0.05);
+      --gloss: rgba(255,255,255,0.65);
     }
 
-    html, body { height: 100%; }
-
-    body {
+    html, body {
+      height: 100%;
       margin: 0;
-      background: linear-gradient(180deg, #f9fbff 0%, #eef4ff 100%);
+      padding: 0;
       overflow: hidden;
+      background: radial-gradient(1200px 800px at 20% 20%, var(--bg2) 0%, transparent 60%),
+                  radial-gradient(1100px 700px at 80% 70%, var(--bg2) 0%, transparent 55%),
+                  linear-gradient(180deg, var(--bg1), var(--bg2));
+      background-attachment: fixed;
     }
 
-    .bg {
+    canvas {
       position: fixed;
       inset: 0;
-      z-index: -1;
-      pointer-events: none;
+      width: 100%;
+      height: 100%;
+      display: block;
+      z-index: 0;
     }
 
-    .blob {
-      position: absolute;
-      width: 85vmax;
-      height: 85vmax;
-      top: 50%;
-      filter: blur(var(--blur));
-      opacity: 0.7;
-      will-change: transform, background;
-      transform: var(--move, translate(-50%, -50%)) var(--skew, skew(0deg, 0deg)) var(--scale, scale(1)) var(--rot, rotate(0turn));
-    }
-
-    .blob--left {
-      left: 0%;
-      --move: translate(-35%, -50%);
-      background: radial-gradient(
-        circle at var(--cx1, 40%) var(--cy1, 50%),
-        rgba(0, 102, 255, 0.35) 0%,
-        rgba(0, 153, 255, 0.25) 25%,
-        rgba(200, 230, 255, 0.1) 60%,
-        rgba(255, 255, 255, 0) 80%
-      );
-      mix-blend-mode: screen;
-      animation: breathe-left 10s ease-in-out infinite alternate;
-    }
-
-    .blob--right {
-      left: 100%;
-      --move: translate(-65%, -50%);
-      background: radial-gradient(
-        circle at var(--cx2, 60%) var(--cy2, 50%),
-        rgba(51, 153, 255, 0.3) 0%,
-        rgba(102, 204, 255, 0.2) 25%,
-        rgba(200, 230, 255, 0.1) 55%,
-        rgba(255, 255, 255, 0) 80%
-      );
-      mix-blend-mode: screen;
-      animation: breathe-right 12s ease-in-out infinite alternate;
-    }
-
-    @keyframes breathe-left {
-      0% { --scale: scale(0.96); --rot: rotate(-0.015turn); }
-      100% { --scale: scale(1.05); --rot: rotate(0.015turn); }
-    }
-    @keyframes breathe-right {
-      0% { --scale: scale(0.95); --rot: rotate(0.015turn); }
-      100% { --scale: scale(1.06); --rot: rotate(-0.015turn); }
-    }
-
+    /* Respektuje preferenci sníženého pohybu */
     @media (prefers-reduced-motion: reduce) {
-      .blob { animation: none; }
+      canvas { display:none; }
     }
   </style>
 </head>
 <body>
-  <div class="bg" aria-hidden="true">
-    <div class="blob blob--left" id="blobLeft"></div>
-    <div class="blob blob--right" id="blobRight"></div>
-  </div>
-
+  <canvas id="waves"></canvas>
   <script>
-    (function () {
-      const root = document.documentElement;
-      const left = document.getElementById('blobLeft');
-      const right = document.getElementById('blobRight');
+    const canvas = document.getElementById('waves');
+    const ctx = canvas.getContext('2d');
 
-      let targetX = 0.5, targetY = 0.5;
-      let x = 0.5, y = 0.5;
+    let w, h, t = 0;
+    let mouseX = 0, mouseY = 0, targetX = 0, targetY = 0;
 
-      const onPointerMove = (e) => {
-        const cx = e.clientX ?? (e.touches && e.touches[0]?.clientX) ?? innerWidth / 2;
-        const cy = e.clientY ?? (e.touches && e.touches[0]?.clientY) ?? innerHeight / 2;
-        targetX = Math.max(0, Math.min(1, cx / innerWidth));
-        targetY = Math.max(0, Math.min(1, cy / innerHeight));
-      };
-      addEventListener('pointermove', onPointerMove, { passive: true });
-      addEventListener('touchmove', onPointerMove, { passive: true });
-      addEventListener('pointerleave', () => { targetX = 0.5; targetY = 0.5; });
+    function resize() {
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      w = canvas.width  = Math.floor(window.innerWidth  * dpr);
+      h = canvas.height = Math.floor(window.innerHeight * dpr);
+      canvas.style.width  = window.innerWidth + 'px';
+      canvas.style.height = window.innerHeight + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // pro ostré vykreslení
+    }
+    window.addEventListener('resize', resize); resize();
 
-      const lerp = (a, b, t) => a + (b - a) * t;
+    // Načteme barvy z CSS proměnných
+    const styles = getComputedStyle(document.documentElement);
+    const W1 = styles.getPropertyValue('--wave1').trim();
+    const W2 = styles.getPropertyValue('--wave2').trim();
+    const W3 = styles.getPropertyValue('--wave3').trim();
+    const GLOSS = styles.getPropertyValue('--gloss').trim();
 
-      function update() {
-        x = lerp(x, targetX, 0.08);
-        y = lerp(y, targetY, 0.08);
-        root.style.setProperty('--mx', String(x));
-        root.style.setProperty('--my', String(y));
+    // Cílené parallax posuny podle myši (jemné, vhodné pod dashboard)
+    document.addEventListener('mousemove', e => { targetX = e.clientX; targetY = e.clientY; });
+    document.addEventListener('touchmove', e => { if(e.touches[0]){ targetX = e.touches[0].clientX; targetY = e.touches[0].clientY; } }, {passive:true});
 
-        calcBlob(left, 0.2, 0.5, getVmin('--follow-left'));
-        calcBlob(right, 0.8, 0.5, getVmin('--follow-right'));
-
-        requestAnimationFrame(update);
+    function drawWave(color, amp, freq, phase, baseY, parallax){
+      ctx.beginPath();
+      const offset = (mouseX - window.innerWidth/2) * parallax; // jemný horizontální posun
+      for (let x = 0; x <= window.innerWidth; x++) {
+        const y = baseY + Math.sin((x + offset)/freq + phase) * amp;
+        if (x === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
       }
+      ctx.lineTo(window.innerWidth, window.innerHeight);
+      ctx.lineTo(0, window.innerHeight);
+      ctx.closePath();
+      ctx.fillStyle = color;
+      ctx.fill();
+    }
 
-      function getVmin(varName) {
-        const v = parseFloat(getComputedStyle(root).getPropertyValue(varName));
-        const minSide = Math.min(innerWidth, innerHeight);
-        return (v / 100) * minSide;
-      }
+    function animate(){
+      requestAnimationFrame(animate);
+      // Plynulé následování myši
+      mouseX += (targetX - mouseX) * 0.06;
+      mouseY += (targetY - mouseY) * 0.06;
 
-      function calcBlob(el, baseNX, baseNY, followPx) {
-        const cx = x * innerWidth;
-        const cy = y * innerHeight;
-        const baseX = baseNX * innerWidth;
-        const baseY = baseNY * innerHeight;
-        const dx = cx - baseX;
-        const dy = cy - baseY;
-        const dist = Math.hypot(dx, dy);
+      ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
 
-        const bendRadiusPx = parseFloat(getComputedStyle(root).getPropertyValue('--bend-radius')) * Math.min(innerWidth, innerHeight) / 100;
-        const influence = Math.exp(-(dist * dist) / (bendRadiusPx * bendRadiusPx));
+      // Jemná záře nahoře – zesvětlení pro lepší kontrast s tmavým textem
+      const glossGrad = ctx.createLinearGradient(0, 0, 0, window.innerHeight*0.35);
+      glossGrad.addColorStop(0, GLOSS);
+      glossGrad.addColorStop(1, 'rgba(255,255,255,0.0)');
+      ctx.fillStyle = glossGrad;
+      ctx.fillRect(0, 0, window.innerWidth, window.innerHeight*0.35);
 
-        const mx = (dx / Math.max(1, dist)) * followPx * influence;
-        const my = (dy / Math.max(1, dist)) * followPx * influence;
+      // Vertikální jemné houpání podle času a polohy myši
+      const sway = Math.sin(t*0.004) * 6 + (mouseY - window.innerHeight/2) * 0.03;
 
-        const skewX = (dx / Math.max(1, dist)) * influence;
-        const skewY = (dy / Math.max(1, dist)) * influence;
-        const skMax = parseFloat(getComputedStyle(root).getPropertyValue('--skew-max'));
-        const skx = skMax * skewX;
-        const sky = skMax * skewY * 0.6;
+      // Tři velmi světlé vrstvy vln inspirované ukázkou, ale světlejší
+      drawWave(W1, 30, 110,  t*0.006, window.innerHeight*0.65 + sway,  0.06);
+      drawWave(W2, 22, 140,  t*0.007, window.innerHeight*0.72 + sway,  0.04);
+      drawWave(W3, 16, 170,  t*0.008, window.innerHeight*0.78 + sway,  0.02);
 
-        const shift = parseFloat(getComputedStyle(root).getPropertyValue('--bend-shift'));
-        const cxPct = 50 + (x - baseNX) * shift * influence;
-        const cyPct = 50 + (y - baseNY) * shift * 0.8 * influence;
+      t += 1; // rychlost času
+    }
 
-        el.style.setProperty('--skew', `skew(${skx}deg, ${sky}deg)`);
-        el.style.setProperty('--move', `translate(calc(-50% + ${mx}px), calc(-50% + ${my}px))`);
-
-        if (el === left) {
-          el.style.setProperty('--cx1', cxPct + '%');
-          el.style.setProperty('--cy1', cyPct + '%');
-        } else {
-          el.style.setProperty('--cx2', cxPct + '%');
-          el.style.setProperty('--cy2', cyPct + '%');
-        }
-      }
-
-      requestAnimationFrame(update);
-    })();
+    animate();
   </script>
 </body>
 </html>
