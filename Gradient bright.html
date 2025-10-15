@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Světlé pozadí – širší světlý střed, pulzující záře + částice (#118DFF)</title>
+  <title>Světlé pozadí 16:9 – široký světlý střed, pulzující záře + částice (#118DFF)</title>
   <style>
     :root{
       --accent: #118DFF;
@@ -15,16 +15,31 @@
     }
 
     html, body {
+      width: 100%;
       height: 100%;
       margin: 0;
       padding: 0;
       overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: radial-gradient(circle at center, var(--bg1) 65%, var(--bg2) 100%);
+    }
+
+    /* Poměr 16:9 pro pozadí */
+    .background-container {
+      position: relative;
+      width: 100vw;
+      height: 56.25vw; /* 16:9 poměr (9/16 = 0.5625) */
+      max-height: 100vh;
+      max-width: 177.78vh; /* 16:9 poměr obráceně */
+      overflow: hidden;
       background: radial-gradient(circle at center, var(--bg1) 60%, var(--bg2) 100%);
     }
 
-    /* Záře – více na krajích, střed zůstává široký a světlý */
+    /* Záře po stranách */
     .glows {
-      position: fixed;
+      position: absolute;
       inset: 0;
       overflow: hidden;
       z-index: 0;
@@ -87,7 +102,7 @@
     }
 
     #particles-container {
-      position: fixed;
+      position: absolute;
       inset: 0;
       z-index: 1;
       pointer-events: none;
@@ -104,13 +119,15 @@
   </style>
 </head>
 <body>
-  <div class="glows">
-    <div class="glow glow-1"></div>
-    <div class="glow glow-2"></div>
-    <div class="glow glow-3"></div>
-  </div>
+  <div class="background-container">
+    <div class="glows">
+      <div class="glow glow-1"></div>
+      <div class="glow glow-2"></div>
+      <div class="glow glow-3"></div>
+    </div>
 
-  <div id="particles-container"></div>
+    <div id="particles-container"></div>
+  </div>
 
   <script>
     const particlesContainer = document.getElementById('particles-container');
