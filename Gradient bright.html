@@ -131,7 +131,7 @@
 
   <script>
     const particlesContainer = document.getElementById('particles-container');
-    const particleCount = 90;
+    const particleCount = 130;
 
     for (let i = 0; i < particleCount; i++) {
       createParticle();
@@ -193,7 +193,7 @@
         particle.style.top  = `${mouseY + (Math.random() * 10 - 5)}%`;
         particle.style.opacity = '0';
       });
-      setTimeout(() => particle.remove(), 2100);
+      setTimeout(() => particle.remove(), 5200);
 
       const glows = document.querySelectorAll('.glow');
       const moveX = (e.clientX / window.innerWidth - 0.5) * 10;
@@ -203,3 +203,4 @@
   </script>
 </body>
 </html>
+
