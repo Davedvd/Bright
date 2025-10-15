@@ -3,19 +3,15 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Světlé interaktivní pozadí s jemnými vlnami</title>
+  <title>Světlé pozadí – výrazné pulzující záře + částice (#118DFF)</title>
   <style>
-    :root {
-      /* Hlavní barva pro grafy/texty */
+    :root{
       --accent: #118DFF;
-      /* Velmi světlé pozadí – aby tmavý text dobře vynikl */
       --bg1: #ffffff;
-      --bg2: #f6fbff;
-      /* Tóny vln – extrémně světlé s akcentním nádechem */
-      --wave1: rgba(17,141,255,0.10);
-      --wave2: rgba(17,141,255,0.07);
-      --wave3: rgba(17,141,255,0.05);
-      --gloss: rgba(255,255,255,0.65);
+      --bg2: #f5fbff;
+      --glowA: rgba(17,141,255,0.35);
+      --glowB: rgba(17,141,255,0.25);
+      --glowC: rgba(255,255,255,0.9);
     }
 
     html, body {
@@ -23,99 +19,154 @@
       margin: 0;
       padding: 0;
       overflow: hidden;
-      background: radial-gradient(1200px 800px at 20% 20%, var(--bg2) 0%, transparent 60%),
-                  radial-gradient(1100px 700px at 80% 70%, var(--bg2) 0%, transparent 55%),
-                  linear-gradient(180deg, var(--bg1), var(--bg2));
-      background-attachment: fixed;
+      background: linear-gradient(180deg, var(--bg1), var(--bg2));
     }
 
-    canvas {
+    /* výraznější pulzující záře */
+    .glows {
       position: fixed;
       inset: 0;
-      width: 100%;
-      height: 100%;
-      display: block;
+      overflow: hidden;
       z-index: 0;
+      pointer-events: none;
     }
 
-    /* Respektuje preferenci sníženého pohybu */
-    @media (prefers-reduced-motion: reduce) {
-      canvas { display:none; }
+    .glow {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(110px);
+      opacity: 0.6;
+      transform: translate3d(0,0,0);
+      animation: strongPulse 6s ease-in-out infinite;
+    }
+
+    @keyframes strongPulse {
+      0%, 100% {
+        opacity: 0.45;
+        transform: scale(1);
+      }
+      50% {
+        opacity: 1;
+        transform: scale(1.25);
+      }
+    }
+
+    .glow-1 {
+      width: 600px; height: 600px;
+      left: -100px; top: -100px;
+      background: radial-gradient(circle at center, var(--glowC) 0%, var(--glowA) 50%, transparent 100%);
+      animation-delay: 0s;
+    }
+    .glow-2 {
+      width: 700px; height: 700px;
+      right: -200px; top: 10%;
+      background: radial-gradient(circle at center, var(--glowC) 0%, var(--glowB) 60%, transparent 100%);
+      animation-delay: 1s;
+    }
+    .glow-3 {
+      width: 800px; height: 800px;
+      left: 25%; bottom: -250px;
+      background: radial-gradient(circle at center, var(--glowC) 0%, var(--glowB) 55%, transparent 100%);
+      animation-delay: 2s;
+    }
+
+    #particles-container {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .particle {
+      position: absolute;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 18px rgba(17,141,255,0.8), 0 0 36px rgba(17,141,255,0.35);
+      opacity: 0;
+      will-change: transform, opacity, left, top;
     }
   </style>
 </head>
 <body>
-  <canvas id="waves"></canvas>
+  <div class="glows">
+    <div class="glow glow-1"></div>
+    <div class="glow glow-2"></div>
+    <div class="glow glow-3"></div>
+  </div>
+
+  <div id="particles-container"></div>
+
   <script>
-    const canvas = document.getElementById('waves');
-    const ctx = canvas.getContext('2d');
+    const particlesContainer = document.getElementById('particles-container');
+    const particleCount = 90;
 
-    let w, h, t = 0;
-    let mouseX = 0, mouseY = 0, targetX = 0, targetY = 0;
-
-    function resize() {
-      const dpr = Math.min(2, window.devicePixelRatio || 1);
-      w = canvas.width  = Math.floor(window.innerWidth  * dpr);
-      h = canvas.height = Math.floor(window.innerHeight * dpr);
-      canvas.style.width  = window.innerWidth + 'px';
-      canvas.style.height = window.innerHeight + 'px';
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // pro ostré vykreslení
-    }
-    window.addEventListener('resize', resize); resize();
-
-    // Načteme barvy z CSS proměnných
-    const styles = getComputedStyle(document.documentElement);
-    const W1 = styles.getPropertyValue('--wave1').trim();
-    const W2 = styles.getPropertyValue('--wave2').trim();
-    const W3 = styles.getPropertyValue('--wave3').trim();
-    const GLOSS = styles.getPropertyValue('--gloss').trim();
-
-    // Cílené parallax posuny podle myši (jemné, vhodné pod dashboard)
-    document.addEventListener('mousemove', e => { targetX = e.clientX; targetY = e.clientY; });
-    document.addEventListener('touchmove', e => { if(e.touches[0]){ targetX = e.touches[0].clientX; targetY = e.touches[0].clientY; } }, {passive:true});
-
-    function drawWave(color, amp, freq, phase, baseY, parallax){
-      ctx.beginPath();
-      const offset = (mouseX - window.innerWidth/2) * parallax; // jemný horizontální posun
-      for (let x = 0; x <= window.innerWidth; x++) {
-        const y = baseY + Math.sin((x + offset)/freq + phase) * amp;
-        if (x === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      }
-      ctx.lineTo(window.innerWidth, window.innerHeight);
-      ctx.lineTo(0, window.innerHeight);
-      ctx.closePath();
-      ctx.fillStyle = color;
-      ctx.fill();
+    for (let i = 0; i < particleCount; i++) {
+      createParticle();
     }
 
-    function animate(){
-      requestAnimationFrame(animate);
-      // Plynulé následování myši
-      mouseX += (targetX - mouseX) * 0.06;
-      mouseY += (targetY - mouseY) * 0.06;
-
-      ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
-
-      // Jemná záře nahoře – zesvětlení pro lepší kontrast s tmavým textem
-      const glossGrad = ctx.createLinearGradient(0, 0, 0, window.innerHeight*0.35);
-      glossGrad.addColorStop(0, GLOSS);
-      glossGrad.addColorStop(1, 'rgba(255,255,255,0.0)');
-      ctx.fillStyle = glossGrad;
-      ctx.fillRect(0, 0, window.innerWidth, window.innerHeight*0.35);
-
-      // Vertikální jemné houpání podle času a polohy myši
-      const sway = Math.sin(t*0.004) * 6 + (mouseY - window.innerHeight/2) * 0.03;
-
-      // Tři velmi světlé vrstvy vln inspirované ukázkou, ale světlejší
-      drawWave(W1, 30, 110,  t*0.006, window.innerHeight*0.65 + sway,  0.06);
-      drawWave(W2, 22, 140,  t*0.007, window.innerHeight*0.72 + sway,  0.04);
-      drawWave(W3, 16, 170,  t*0.008, window.innerHeight*0.78 + sway,  0.02);
-
-      t += 1; // rychlost času
+    function createParticle() {
+      const particle = document.createElement('div');
+      particle.className = 'particle';
+      const size = Math.random() * 3 + 1;
+      particle.style.width = `${size}px`;
+      particle.style.height = `${size}px`;
+      resetParticle(particle);
+      particlesContainer.appendChild(particle);
+      requestAnimationFrame(() => animateParticle(particle));
     }
 
-    animate();
+    function resetParticle(particle) {
+      const posX = Math.random() * 100;
+      const posY = Math.random() * 100;
+      particle.style.left = `${posX}%`;
+      particle.style.top = `${posY}%`;
+      particle.style.opacity = '0';
+      return { x: posX, y: posY };
+    }
+
+    function animateParticle(particle) {
+      const pos = resetParticle(particle);
+      const duration = Math.random() * 10 + 10;
+      const delay = Math.random() * 4;
+
+      setTimeout(() => {
+        particle.style.transition = `left ${duration}s linear, top ${duration}s linear, opacity ${duration/4}s ease-in-out`;
+        particle.style.opacity = (Math.random() * 0.35 + 0.25).toString();
+        const moveX = pos.x + (Math.random() * 20 - 10);
+        const moveY = pos.y - Math.random() * 30;
+        particle.style.left = `${moveX}%`;
+        particle.style.top  = `${moveY}%`;
+        setTimeout(() => animateParticle(particle), duration * 1000);
+      }, delay * 1000);
+    }
+
+    document.addEventListener('mousemove', (e) => {
+      const mouseX = (e.clientX / window.innerWidth) * 100;
+      const mouseY = (e.clientY / window.innerHeight) * 100;
+
+      const particle = document.createElement('div');
+      particle.className = 'particle';
+      const size = Math.random() * 4 + 2;
+      particle.style.width = `${size}px`;
+      particle.style.height = `${size}px`;
+      particle.style.left = `${mouseX}%`;
+      particle.style.top = `${mouseY}%`;
+      particle.style.opacity = '0.8';
+      particlesContainer.appendChild(particle);
+
+      requestAnimationFrame(() => {
+        particle.style.transition = 'left 2s ease-out, top 2s ease-out, opacity 2s ease-out';
+        particle.style.left = `${mouseX + (Math.random() * 10 - 5)}%`;
+        particle.style.top  = `${mouseY + (Math.random() * 10 - 5)}%`;
+        particle.style.opacity = '0';
+      });
+      setTimeout(() => particle.remove(), 2100);
+
+      const glows = document.querySelectorAll('.glow');
+      const moveX = (e.clientX / window.innerWidth - 0.5) * 10;
+      const moveY = (e.clientY / window.innerHeight - 0.5) * 10;
+      glows.forEach(g => { g.style.transform = `translate(${moveX}px, ${moveY}px)`; });
+    });
   </script>
 </body>
 </html>
