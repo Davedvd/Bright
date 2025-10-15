@@ -3,15 +3,15 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Světlé pozadí – výrazné pulzující záře + částice (#118DFF)</title>
+  <title>Světlé pozadí – širší světlý střed, pulzující záře + částice (#118DFF)</title>
   <style>
     :root{
       --accent: #118DFF;
       --bg1: #ffffff;
-      --bg2: #f5fbff;
+      --bg2: #f6fbff;
       --glowA: rgba(17,141,255,0.35);
       --glowB: rgba(17,141,255,0.25);
-      --glowC: rgba(255,255,255,0.9);
+      --glowC: rgba(255,255,255,0.95);
     }
 
     html, body {
@@ -19,10 +19,10 @@
       margin: 0;
       padding: 0;
       overflow: hidden;
-      background: linear-gradient(180deg, var(--bg1), var(--bg2));
+      background: radial-gradient(circle at center, var(--bg1) 60%, var(--bg2) 100%);
     }
 
-    /* výraznější pulzující záře */
+    /* Záře – více na krajích, střed zůstává široký a světlý */
     .glows {
       position: fixed;
       inset: 0;
@@ -34,40 +34,56 @@
     .glow {
       position: absolute;
       border-radius: 50%;
-      filter: blur(110px);
+      filter: blur(130px);
       opacity: 0.6;
       transform: translate3d(0,0,0);
-      animation: strongPulse 6s ease-in-out infinite;
+      animation: strongPulse 7s ease-in-out infinite;
     }
 
     @keyframes strongPulse {
       0%, 100% {
-        opacity: 0.45;
+        opacity: 0.4;
         transform: scale(1);
       }
       50% {
         opacity: 1;
-        transform: scale(1.25);
+        transform: scale(1.3);
       }
     }
 
     .glow-1 {
-      width: 600px; height: 600px;
-      left: -100px; top: -100px;
-      background: radial-gradient(circle at center, var(--glowC) 0%, var(--glowA) 50%, transparent 100%);
+      width: 700px; height: 700px;
+      left: -250px; top: -150px;
+      background: radial-gradient(circle at center, var(--glowC) 0%, var(--glowA) 40%, transparent 100%);
       animation-delay: 0s;
     }
+
     .glow-2 {
-      width: 700px; height: 700px;
-      right: -200px; top: 10%;
-      background: radial-gradient(circle at center, var(--glowC) 0%, var(--glowB) 60%, transparent 100%);
-      animation-delay: 1s;
-    }
-    .glow-3 {
-      width: 800px; height: 800px;
-      left: 25%; bottom: -250px;
-      background: radial-gradient(circle at center, var(--glowC) 0%, var(--glowB) 55%, transparent 100%);
+      width: 900px; height: 900px;
+      right: -300px; top: 5%;
+      background: radial-gradient(circle at center, var(--glowC) 0%, var(--glowB) 50%, transparent 100%);
       animation-delay: 2s;
+    }
+
+    .glow-3 {
+      width: 1200px; height: 1200px;
+      left: 50%; bottom: -400px;
+      transform: translateX(-50%);
+      background: radial-gradient(circle at center, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.8) 55%, transparent 100%);
+      filter: blur(160px);
+      opacity: 0.95;
+      animation: subtlePulse 9s ease-in-out infinite;
+    }
+
+    @keyframes subtlePulse {
+      0%, 100% {
+        opacity: 0.85;
+        transform: translateX(-50%) scale(1);
+      }
+      50% {
+        opacity: 1;
+        transform: translateX(-50%) scale(1.1);
+      }
     }
 
     #particles-container {
